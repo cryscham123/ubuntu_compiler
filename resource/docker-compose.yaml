@@ -3,7 +3,7 @@ version: "3.8"
 services:
   boj_test:
     build: './'
-    image: boj_test
-    container_name: boj_test
+    image: ubuntu_compiler
+    container_name: ubuntu_compiler
     volumes: 
       - "${RESOURCE_PWD}/files:/files"
