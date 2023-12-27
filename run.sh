@@ -1,14 +1,11 @@
 #!/bin/bash
 
-ask()
+printUsage()
 {
-    while read -n 1 answer; do
-        echo
-        case $answer in
-            [Yy]) return 0 ;;
-            [Nn]) return 1 ;;
-        esac
-    done
+	echo "Usage: yo [OPTION]... [DIRECTORY]"
+	echo
+	echo $' -D\t\tCompile in ubuntu with docker'
+	echo $' -I[number]\tCreate infile before compile'
 }
 
 compileInDocker()
@@ -28,68 +25,91 @@ compileInDocker()
 	fi
 }
 
-export RESOURCE_PWD=${HOME}/boj/resource
-
-printf "Your Current Path: \e[93m\'%s\'\e[0m\n\n" $(pwd)
-for dir in */; do
-	printf "\e[93m\'$(basename $dir)\'\e[0m: Do you want append input file? (Y/N)\n\n"
-	ask
-	if [ $? -eq 0 ]; then
-		echo
-		echo "Please Type Infile's Number."
-		echo $'If you done, type n\n'
-		while read target; do
-			if [[ $target =~ ^[0-9]+$ ]]; then
+# validate argument
+if [[ $# -lt 1 ]]; then
+	printUsage
+	exit 1
+fi
+for arg in "$@"; do
+	if [[ $arg == -* ]]; then
+		case ${arg:1} in 
+			D*)
+				export exe_docker
+				;;
+			I*)
+				if [[ ! ${arg:2} =~ ^[0-9]+$ ]]; then
+					echo $'\e[91mError: \e[0m'"Invalid Argument '${arg:2}'"
+					echo
+					printUsage
+					exit 1
+				fi
+				input="$input ${arg:2}"
+				;;
+			*)
+				echo $'\e[91mError: \e[0m'"Invalid Argument '$arg'"
 				echo
-				echo "You choose '$target'"
-				echo "Type all input and press cntl+d."
-				echo $'\e[93mWarning: \e[0m'The values you type now will replace the existing inputs
-				echo
-				cat > ${dir}${target}.in
-				echo
-				echo $'\e[92mInFile creation success: \e[0m'${dir}${target}.in
-				echo
-			elif [ $target = 'n' ]; then
-				break
-			else
-				echo "Input must be a number."
-			fi
-			echo "Please Type Infile's Number."
-			echo $'If you done, type n\n'
-		done
+				printUsage
+				exit 1
+				;;
+		esac
+	else
+		if [ -v target ]; then
+			echo $'\e[91mError: \e[0m'"Invalid Argument '$arg'"
+			echo
+			printUsage
+			exit 1
+		fi
+		target=$arg
 	fi
-	printf "\n\e[93m\'$(basename $dir)\'\e[0m: input file setting done.\n\n"
 done
 
-cp -r $(pwd) ${RESOURCE_PWD}/files
+# check argument
+target_path=$(pwd)/$target
+if [ ! -d $target_path ]; then
+	echo $'\e[91mError: \e[0m'"No such directory '$target'"
+	exit 1
+fi
+for file in $input; do
+	printf "Infile creation for \e[93m\'%s\'\e[0m\n" $file
+	echo "Type all input and press cntl+d."
+	echo
+	cat > ${target_path}/${file}.in
+	echo
+	if [ $? -eq 0 ]; then
+		echo $'\e[92mInFile creation success: \e[0m'${target}/${file}.in
+		echo
+	else
+		echo $'\e[92mInFile creation Failed: \e[0m'${target}/${file}.in
+		exit 1
+	fi
+done
+
+# copy files and execute
+export RESOURCE_PWD=${HOME}/boj/resource
+if [ ! -e ${RESOURCE_PWD}/files ]; then
+	mkdir -p ${RESOURCE_PWD}/files
+fi
+cp -r ${target_path} ${RESOURCE_PWD}/files/$target
 if [ $? -ne 0 ]; then
-	echo $'\e[91mError: \e[0m copy to '${RESOURCE_PWD}/files failed.
+	echo $'\e[91mError: \e[0mcopy to '${RESOURCE_PWD}/files failed.
 	exit 1
 fi
 
-type gcc > /dev/null
-if [ $? -ne 0 ]; then
+if [ -v exe_docker ]; then
 	compileInDocker
 else
-	gcc --version | grep -w clang > /dev/null
-	if [ $? -eq 0 ]; then
-		compileInDocker
-	else
-		echo $'\n\e[92mCompile now...\e[0m\n'
-		${RESOURCE_PWD}/tools/run.sh
-	fi
+	echo $'\n\e[92mCompile in local...\e[0m\n'
+	${RESOURCE_PWD}/tools/run.sh ${RESOURCE_PWD}/files
 fi
 
-echo
 for dir in ${RESOURCE_PWD}/files/*/; do
-	printf "\e[92m========== RESULT FOR %s ==========\e[0m\n\n" $(basename $dir)
 	if compgen -G ${dir}error > /dev/null; then
-		cp ${dir}error $(pwd)/$(basename $dir)
-		echo $'\e[91mCompile Error:\e[0m '$(basename $dir)
+		echo $'\e[91mError:\e[0m '$(basename $dir)
 		echo
 		cat ${dir}error
-		continue 
+		break
 	fi
+	printf "\e[92m========== RESULT FOR %s ==========\e[0m\n\n" $(basename $dir)
 	for file in ${dir}*.out; do
 		cp $file $(pwd)/$(basename $dir)
 		echo $'\e[95mresult: \e[0m'$(basename $file)
@@ -99,4 +119,4 @@ for dir in ${RESOURCE_PWD}/files/*/; do
 	done
 done
 
-rm -r ${RESOURCE_PWD}/files
+rm -rf ${RESOURCE_PWD}/files/*

@@ -9,4 +9,4 @@ g++ \
 
 COPY tools/* /usr/bin/
 
-CMD ["run.sh"]
+CMD ["run.sh", "/files"]
