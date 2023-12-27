@@ -83,7 +83,14 @@ fi
 echo
 for dir in ${RESOURCE_PWD}/files/*/; do
 	printf "\e[92m========== RESULT FOR %s ==========\e[0m\n\n" $(basename $dir)
-	for file in $dir*.out; do
+	if compgen -G ${dir}error > /dev/null; then
+		cp ${dir}error $(pwd)/$(basename $dir)
+		echo $'\e[91mCompile Error:\e[0m '$(basename $dir)
+		echo
+		cat ${dir}error
+		continue 
+	fi
+	for file in ${dir}*.out; do
 		cp $file $(pwd)/$(basename $dir)
 		echo $'\e[95mresult: \e[0m'$(basename $file)
 		cat $file

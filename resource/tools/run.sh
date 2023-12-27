@@ -3,14 +3,13 @@
 cd /files
 
 for dir in */; do
-	g++ -std=c++17 $dir/*.cpp 2> /dev/null
+	g++ -std=c++17 ${dir}*.cpp 2> ${dir}error
 	if [ $? -eq 0 ]; then
-		for file in $dir*.in; do
+		for file in ${dir}*.in; do
 			out="${file/%.in/.out}"
 			./a.out < $file > ${out}
 		done
 		rm a.out
-	else
-		echo $'\e[91mCompile Error:\e[0m '$(basename $dir)
+		rm ${dir}error
 	fi
 done
