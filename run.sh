@@ -41,7 +41,7 @@ for dir in */; do
 		while read target; do
 			if [[ $target =~ ^[0-9]+$ ]]; then
 				echo
-				echo "You choose '$target.'"
+				echo "You choose '$target'"
 				echo "Type all input and press cntl+d."
 				echo $'\e[93mWarning: \e[0m'The values you type now will replace the existing inputs
 				echo
