@@ -28,17 +28,12 @@ compileInDocker()
 {
 	echo $'\n\e[92mCompile in ubuntu with docker...\e[0m\n'
 
-	docker-compose -f ${RESOURCE_PWD}/docker-compose.yaml build
-	if [ $? -ne 0 ]; then
-		echo $'\e[91mError: \e[0m docker-compose execute failed.'
-		exit 1
-	fi
-
 	docker-compose -f ${RESOURCE_PWD}/docker-compose.yaml up
 	if [ $? -ne 0 ]; then
 		echo $'\e[91mError: \e[0m docker-compose execute failed.'
 		exit 1
 	fi
+	echo
 }
 
 # validate argument
@@ -69,7 +64,7 @@ for arg in "$@"; do
 				;;
 		esac
 	else
-		if [ -v target ]; then
+		if [ ! -z $target ]; then
 			echo $'\e[91mError: \e[0m'"Invalid Argument '$arg'"
 			echo
 			printUsage
@@ -137,8 +132,12 @@ for dir in ${RESOURCE_PWD}/files/*/; do
 	fi
 	printf "\e[92m========== RESULT FOR %s ==========\e[0m\n\n" $(basename $dir)
 	for file in ${dir}*.out; do
+		in="${file/%.out/.in}"
+		echo $'\e[95mINPUT:\e[0m\t'$(basename $in)
+		cat $in
+		echo
 		cp $file $(pwd)/$(basename $dir)
-		echo $'\e[95mresult: \e[0m'$(basename $file)
+		echo $'\e[94mRESULT:\e[0m\t'$(basename $file)
 		cat $file
 		echo
 		echo
