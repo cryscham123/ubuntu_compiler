@@ -4,8 +4,24 @@ printUsage()
 {
 	echo "Usage: yo [OPTION]... [DIRECTORY]"
 	echo
-	echo $' -D\t\tCompile in ubuntu with docker'
-	echo $' -I[number]\tCreate infile before compile'
+	echo $' -d, -D\t\tCompile in ubuntu with docker'
+	echo $' -i, -I[number]\tCreate infile before compile'
+}
+
+createInfile()
+{
+	printf "Infile creation for \e[93m\'%s\'\e[0m\n" $1
+	echo "Type all input and press cntl+d."
+	echo
+	cat > ${target_path}/$1.in
+	echo
+	if [ $? -eq 0 ]; then
+		echo $'\e[92mInFile creation success: \e[0m'${target}/$1.in
+		echo
+	else
+		echo $'\e[92mInFile creation Failed: \e[0m'${target}/$1.in
+		exit 1
+	fi
 }
 
 compileInDocker()
@@ -33,10 +49,10 @@ fi
 for arg in "$@"; do
 	if [[ $arg == -* ]]; then
 		case ${arg:1} in 
-			D*)
-				export exe_docker
+			[dD]*)
+				exe_docker=true
 				;;
-			I*)
+			[iI]*)
 				if [[ ! ${arg:2} =~ ^[0-9]+$ ]]; then
 					echo $'\e[91mError: \e[0m'"Invalid Argument '${arg:2}'"
 					echo
@@ -70,32 +86,42 @@ if [ ! -d $target_path ]; then
 	exit 1
 fi
 for file in $input; do
-	printf "Infile creation for \e[93m\'%s\'\e[0m\n" $file
-	echo "Type all input and press cntl+d."
-	echo
-	cat > ${target_path}/${file}.in
-	echo
-	if [ $? -eq 0 ]; then
-		echo $'\e[92mInFile creation success: \e[0m'${target}/${file}.in
-		echo
-	else
-		echo $'\e[92mInFile creation Failed: \e[0m'${target}/${file}.in
-		exit 1
-	fi
+	createInfile $file
 done
 
 # copy files and execute
 export RESOURCE_PWD=${HOME}/boj/resource
-if [ ! -e ${RESOURCE_PWD}/files ]; then
-	mkdir -p ${RESOURCE_PWD}/files
+if [ ! -e ${RESOURCE_PWD}/files/$target ]; then
+	mkdir -p ${RESOURCE_PWD}/files/$target
 fi
-cp -r ${target_path} ${RESOURCE_PWD}/files/$target
-if [ $? -ne 0 ]; then
-	echo $'\e[91mError: \e[0mcopy to '${RESOURCE_PWD}/files failed.
+
+for file in ${target_path}/*; do
+	case ${file##*.} in
+		"in")
+			cp $file ${RESOURCE_PWD}/files/$target
+			in_chk=true
+			;;
+		"cpp")
+			cp $file ${RESOURCE_PWD}/files/$target
+			cpp_chk=true
+			;;
+	esac
+done
+
+if [ -z $in_chk ]; then
+	echo $'There is no Infile. Infile \e[93m\'1\'\e[0m will created.'
+	echo "If you want create more infile, use option -I[number]."
+	echo
+	createInfile 1
+	cp "${target_path}/1.in" ${RESOURCE_PWD}/files/$target
+fi
+
+if [ -z $cpp_chk ]; then
+	echo $'\e[91mError: \e[0m'"At least one .cpp file required in '$target'"
 	exit 1
 fi
 
-if [ -v exe_docker ]; then
+if [ ! -z $exe_docker ]; then
 	compileInDocker
 else
 	echo $'\n\e[92mCompile in local...\e[0m\n'
