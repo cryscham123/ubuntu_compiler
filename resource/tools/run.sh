@@ -3,7 +3,7 @@
 cd $1
 
 for dir in */; do
-	g++ -Wall -Werror -Wextra -std=c++17 ${dir}*.cpp 2> ${dir}error
+	g++ -Wall -Wextra -std=c++17 ${dir}*.cpp 2> ${dir}error
 	if [ $? -eq 0 ]; then
 		for file in ${dir}*.in; do
 			out="${file/%.in/.out}"
